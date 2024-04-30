@@ -7,8 +7,9 @@ set(0,TextSizes);
 rng(0);
 
 addpath('/work/xu2/PESTO-master/','-begin')
+addpath('/work/xu2/kineticGP/C4_dynamic_model/')
 % addpath('/home/rudan/Documents/MATLAB/PESTO-master/','-begin')
-savepath
+
 % addpath(genpath('/home/rudan/Documents/MATLAB/PESTO-master2/'))
 %% Generation of the structs and options for PESTO
 % The structs and the PestoOptions object, which are necessary for the 
