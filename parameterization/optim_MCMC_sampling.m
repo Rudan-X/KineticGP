@@ -8,7 +8,7 @@ rng(0);
 
 addpath('/work/xu2/PESTO-master/','-begin')
 % addpath('/home/rudan/Documents/MATLAB/PESTO-master/','-begin')
-% savepath
+savepath
 % addpath(genpath('/home/rudan/Documents/MATLAB/PESTO-master2/'))
 %% Generation of the structs and options for PESTO
 % The structs and the PestoOptions object, which are necessary for the 
@@ -19,8 +19,15 @@ display(' Prepare structs and options...')
 
 [~,final_acc,param_name,vmaxind]=optim_initialization_parameters();
 
+% global accession and global saving_path will be used by
+% PESTO-master/private/performPT.m
 
 accession=final_acc(arg_ind);
+
+global saving_path
+saving_path=strcat("/work/xu2/kineticGP/results/optimized_parameters/history_MCMCres_",accession, ".mat");
+
+% saving_path=strcat("../results/optimized_parameters/history_MCMCres_",accession, ".mat");
 param_name=[param_name;strcat(param_name(vmaxind),"y22")]; 
 parameters.name   = param_name;
 parameters.min    = -1*ones(length(parameters.name), 1);
@@ -73,7 +80,7 @@ parameters = getParameterSamples(parameters, objectiveFunction, optionsPesto);
 toc
 
 
-filen=strcat("../sampling_res/MCMC_result_",accession,".mat");
+filen=strcat("../results/optimized_parameters/MCMC_result_",accession,".mat");
 save(filen,'parameters')
 
 

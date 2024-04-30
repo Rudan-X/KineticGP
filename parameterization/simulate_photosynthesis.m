@@ -41,17 +41,18 @@ end
 air_RH=0.65;
 air_temp=25;
 
+optim_initialization_global_env_variables(air_temp,air_RH,air_CO2_t0,Ci_t0,PAR_t0) 
+
 
 % Load metabolite names
 mets_name=load_metabolite_names();
 [~,ind_gs]=ismember("Gs[Leaf]",mets_name);
-% OBJECTIVE FUNCTION: Get simulated A and gsw
+
 
 % Rearrange the variables into kintic parameters
 params=Variable(1:6);
 
 global KVlen
-
 pend=6;
 km1=pend+1;
 kmend=pend+sum(KVlen);
@@ -68,7 +69,7 @@ permeab=Variable(perm1:end);
 
 [Ini,max_vel,kms]=RAC4leafMetaIni(params,kvalues,vmaxs);% Initial values
 
-
+% OBJECTIVE FUNCTION: Get simulated A and gsw
 % Set ODE options
 nm=length(Ini);
 options=odeset('NonNegative',1:nm, 'RelTol', 1e-04,'Events', @reaching_steadyA); %  
@@ -88,7 +89,7 @@ elseif strcmp(curve,'AQ')
 end
 
 for i=1:nchange
-    optim_initialization_global_env_variables(air_temp,air_RH,air_CO2_t0,Ci_t0,PAR_t0) 
+    initialize_reaction_rates();
     global Gs_VEL
     if i==1
         xt0=Ini;
@@ -135,42 +136,4 @@ end
 
 chisq_A=(A_t-simA).^2./A_t_sd.^2;
 chisq_A=sum(chisq_A,'omitnan');
-
-
-
-
-%%
-%     chisq_A=(A_t-simA).^2./A_t_sd.^2;
-%     chisq_A=sum(chisq_A,'omitnan');
-% 
-%     if strcmp(curve,'ACI')
-%         N=ode_sol.x';
-%         A = repmat(N,[1 length(Vt)]);
-%         [~,closestIndex] = min(abs(A-Vt'));
-%         mets_name=load_metabolite_names();
-%         [~,ind_gs]=ismember("Gs[Leaf]",mets_name);
-%         Result=ode_sol.y';
-%         simGs=Result(closestIndex,ind_gs);
-% 
-%         chisq_gs=(gs_t-simGs).^2./gs_t_sd.^2;
-%         chisq_gs=sum(chisq_gs,'omitnan');
-%         z=chisq_A+chisq_gs;
-%         x=envFactor.Ca_t';
-%         x(t_ca==setdiff(t_ca,t_simulation))=[];
-%         res=[simA,A_t,A_t_sd,simGs, gs_t,gs_t_sd,x'];
-% 
-%     elseif strcmp(curve,'AQ')
-%         z=chisq_A;
-%         chisq_gs=[];
-%         res=[simA,A_t,A_t_sd,envFactor.Q_t];
-% 
-%     end
-% 
-% else
-%     z=1e10;
-%     res=[];
-%     chisq_A=1e10;
-%     chisq_gs=1e10;
-% end
-
 
