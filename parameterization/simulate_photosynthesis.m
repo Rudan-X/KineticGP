@@ -89,7 +89,7 @@ elseif strcmp(curve,'AQ')
 end
 
 for i=1:nchange
-    ode_sol=[];
+    % ode_sol=[];
     initialize_reaction_rates();
     global Gs_VEL
     if i==1
