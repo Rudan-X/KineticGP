@@ -76,11 +76,7 @@ options=odeset('NonNegative',1:nm, 'RelTol', 1e-04,'Events', @reaching_steadyA);
 
 tspan=[0 60*60]; % maximum simulation time, 60minutes
 
-% Initialize simulation vectors
-% Gs_VEL_tot=[];
-simA=zeros(length(A_t),1);
-simGs=zeros(length(A_t),1);
-
+%%
 % global Gs_VEL initialized in optim_initialization...
 if strcmp(curve,'ACI')
     nchange=length(Ca_t);
@@ -88,14 +84,21 @@ elseif strcmp(curve,'AQ')
     nchange=length(Q_t);
 end
 
-for i=1:nchange
-    % ode_sol=[];
+% Initialize simulation vectors
+Gs_VEL_tot=[];
+simA=zeros(nchange,1);
+simGs=zeros(nchange,1);
+
+continue_flag=true;
+i=1;
+while continue_flag && i<(nchange+1)
+    ode_sol=[];
     initialize_reaction_rates();
     global Gs_VEL
     if i==1
         xt0=Ini;
     else
-        xt0=ode_sol.y(:,end);
+        xt0=current_state;
     end
     if strcmp(curve,'ACI')
         envFactor.Ca_t=Ca_t(i);
@@ -104,21 +107,24 @@ for i=1:nchange
     end
     ode_sol=ode15s(@(t,x)RAC4leafMetaMB(t,x,params,max_vel,kms,act_rate,permeab,envFactor),tspan,xt0,options); 
     
-    if ~isempty(ode_sol) && max(ode_sol.x)~=tspan(2)
+    if ~isempty(ode_sol.xe) && max(ode_sol.x)~=tspan(2)
         ind_A=2;
         simA(i)=Gs_VEL(end,ind_A);
+        simGs(i)=ode_sol.y(ind_gs,end);
+        current_state=ode_sol.y(:,end);
     else
-        simA(i)=1e10;
+        simA(i)=1e5;
+        simGs(i)=1e5;
+        continue_flag=false;
     end
 
-    % if i==1
-    %     Gs_VEL_tot=Gs_VEL;
-    % else
-    %     Gs_VEL(:,1)=Gs_VEL_tot(end,1)+Gs_VEL(:,1);
-    %     Gs_VEL_tot=[Gs_VEL_tot;Gs_VEL];
-    % end
-
-    simGs(i)=ode_sol.y(ind_gs,end);
+    if i==1
+        Gs_VEL_tot=Gs_VEL;
+    else
+        Gs_VEL(:,1)=Gs_VEL_tot(end,1)+Gs_VEL(:,1);
+        Gs_VEL_tot=[Gs_VEL_tot;Gs_VEL];
+    end
+    i=i+1;
 end
 
 if strcmp(curve,'ACI')
