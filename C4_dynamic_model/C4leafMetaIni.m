@@ -1,15 +1,13 @@
-function [LeafMs,Vel,KVal] = C4leafMetaIni(PARAMS,KVALUES,VMAX)
+function [LeafMs] = C4leafMetaIni(envFactor)
 
-intercept=PARAMS(2);
-leafInis = zeros(1,7);
-leafInis= LeafIni(intercept);
-MetaInis = zeros(1,87);
-[MetaInis,Vel,KVal]= C4Ini(PARAMS,KVALUES,VMAX);
+leafInis= LeafIni(envFactor);
 
-for m = 1:7
-    LeafMs(m) = leafInis(m);
-end
+MetaInis= C4Ini(envFactor);
 
-for m=1:87
-    LeafMs(7+m)= MetaInis(m);
-end
+LeafMs = zeros(1,109);
+LeafMs(1:7) = leafInis(1:7);
+
+LeafMs(8:94)= MetaInis(1:87);
+
+
+

@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# a detailed overview on sbatch options can be found at
+#   https://slurm.schedmd.com/sbatch.html
+
+# configure the job name and filename for stdout/stderr
+#SBATCH --job-name=MCMC
+# SBATCH --output=out_MCMC.out
+
+# configure email notifications
+#SBATCH --mail-type=NONE				# one of NONE, BEGIN, END, FAIL, REQUEUE, ALL, ...
+
+# change to the scratch directory
+#SBATCH --chdir /work/xu2/KineticGP/SensitivityAnalysis	# change this to your own scratch directory; ensure that required files (e.g. ex_matlab.m) reside in this directory
+
+# set the resource requirements of the job
+# SBATCH --qos=long
+#SBATCH --time=2-00:00			# the time limit for the job
+#SBATCH --nodes=1				# usually 1, unless you use MPI or spawn many independent processes
+#SBATCH --ntasks=1				# usually 1, unless multiple srun invocations
+#SBATCH --cpus-per-task=68      	        # number of cpu cores available; ensure that this fits to the number of threads your program utilizes
+#SBATCH --mem=100G      				# memory available during the job (use units of "M" or "G" for MB and GB respectively)
+#SBATCH --array=1-289
+# load the matlab module
+module load math/MATLAB
+
+# run the matlab code
+SPLIT=1
+srun matlab -nodisplay -r "parallel_analysis($SLURM_ARRAY_TASK_ID)"
+
+
+# alternatively you may input a script to matlab, like so:
+# srun matlab -nodisplay < matlab_script.txt

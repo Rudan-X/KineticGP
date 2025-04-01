@@ -1,40 +1,26 @@
-function LM_DYDT = RAC4leafMetaMB(t,LM_con,params,VMAX,KMS,act_rate,perm,envfactor)  
+function LM_DYDT = RAC4leafMetaMB(t,LM_con,kinetic_param,KE_type,envfactor)  
 
-%global Para_mata;
-% global Jsen;
-global Radiation_PARo;
-global Radiation_PAR;
-%%%%%%%%%%%%%%%%%%%%%
-% global vrpd; 
-MRd=params(end);
+%% Loading global settings, environmental factors and constant concentrations
+WeatherTemperature=envfactor.WeatherTemperature;
+option2=setting.option2;
 
+% Mitochondra respiration
+MRd=kinetic_param(end);
 vrpd=MRd/2/1000;%0.0005;
 
-%%%%%%%%%%%%%%%%%%%%%
-
-global WeatherTemperature;
-Convert=1E6/(2.35E5); 
-
-%%%%%% Input changing environment %%%%%%%%%
-if ~isempty(envfactor.Q_t)
-    Radiation_PARo=envfactor.Q_t;
-end
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Radiation_PAR=Radiation_PARo/Convert;
 
 %RuACT_Con=LM_con(95:98);
-global PSPR_RA_O2;
-global PSPR_RA_CO2;
-PSPR_RA_CO2=LM_con(37);
-PSPR_RA_O2=LM_con(81);
+% global PSPR_RA_O2;
+% global PSPR_RA_CO2;
+% PSPR_RA_CO2=LM_con(37);
+% PSPR_RA_O2=LM_con(81);
+
 %global PSPR_RA_CA;
-global PS2RA_ATP;
-PS2RA_ATP=LM_con(41);
+% global PS2RA_ATP;
+% PS2RA_ATP=LM_con(41);
 RuACT_mb	=	zeros(4,1)	;				
 
-LM_v=RAC4LeafMetaVel(t,LM_con,params,VMAX,KMS,act_rate,perm,envfactor);
+LM_v=RAC4LeafMetaVel(t,LM_con,kinetic_param,KE_type,envfactor);
 NetAssimilation=LM_v(1);
 vCO2b=LM_v(2);
 vCO2s=LM_v(3);
@@ -172,9 +158,7 @@ VolBchl=0.009;
 Volper=0.00045;
 Volmito=0.00045;
 
-global option2; %%O2 diffusion
-option2=1;
-   
+
 %Delta_MC_CO2=(vinf-v1+vleak+2*vrpd)/VolMC;
 Delta_MC_CO2=(vinf-v1+vleak+vrpd)/VolMC;
 Delta_MC_HCO3= (v1 - v2)/VolMC;
@@ -377,12 +361,8 @@ Delta_H2Oou=vH2Ototal/10^6;%umol->mol %WY202010
 Delta_CO2in=vCO2total/10^6;
 
 LeafMB=zeros(7,1);
-%%%%%%%%%my code%%%%%%%%
-LeafMB(1)=0;
-%%%%%%%%%%%%%%%%%%%%%%%%
 
 LeafMB(1)=Delta_Ci;
-
 LeafMB(2)=Delta_Cb;
 LeafMB(3)=Delta_Eb;
 LeafMB(4)=Delta_Gs;

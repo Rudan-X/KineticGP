@@ -1,37 +1,114 @@
-function LMEnz_v=RAC4LeafMetaVel(t,s, params,Velocity_s,KValue,Act_rate,Perm,envFactor)
+function LMEnz_v=RAC4LeafMetaVel(t,s,kinetic_param,KE_type,envFactor)
 
-global RedoxEnyAct;
-global EAPPDK;
-global kdcon;
+%% Loading global settings, environmental factors and constant concentrations
+RatioPPDK=setting.RatioPPDK;
+Pvpr8M=setting.Pvpr8M;
+Para_mata=setting.Para_mata;
+GsResponse=setting.GsResponse;
+PRac=setting.PRac;
+Ratio=setting.Ratio;
+pathway_option=setting.pathway_option;
 
-PPDKRP=params(end-1);
-BallBerryInterceptC4=params(2);
-BallBerrySlopeC4=params(1);
+WeatherTemperature=envFactor.WeatherTemperature;
+WeatherRH=envFactor.WeatherRH;
+Radiation_PAR=envFactor.Radiation_PAR;
+
+WeatherWind=cte_env.WeatherWind;
+Radiation_NIR=cte_env.Radiation_NIR;
+Radiation_LW=cte_env.Radiation_LW;
+PhiLeaf=cte_env.PhiLeaf;
+ainter=cte_env.ainter; % not used when setting.kdcon==0
+VmaxC4=cte_env.VmaxC4; % not used when setting.Para_mata==1
+
+PPDKRP=cte_conc.PPDKRP;
+
+U=cte_conc.U;
+V=cte_conc.V;
+
+Bper_GLU=cte_conc.Bper_GLU;
+Bper_KG=cte_conc.Bper_KG;
+Bper_NADH=cte_conc.Bper_NADH;
+Bper_NAD=cte_conc.Bper_NAD;
+
+Bchl_CA=cte_conc.Bchl_CA;
+Bchl_CN=cte_conc.Bchl_CN;
+Bchl_CP=cte_conc.Bchl_CP;
+MC_CU=cte_conc.MC_CU;
+MC_CA=cte_conc.MC_CA;
+MC_CP=cte_conc.MC_CP;
+MC_UTP=cte_conc.MC_UTP;
+Mchl_CP=cte_conc.Mchl_CP;
+Mchl_CA=cte_conc.Mchl_CA;
+Mchl_CN=cte_conc.Mchl_CN;
+
+
+%% Rearrange kinetic parameters 
+[~,KVlen]=load_initial_solution();
+
+i1=sum(KVlen);
+i2=i1+53;
+i3=i2+10;
+i4=i3+6;
+kvalues=kinetic_param(1:i1);
+KValue=[];
+for i=1:length(KVlen)
+    if i==1
+        starti=1;
+    else
+        starti=endi+1;
+    end
+    endi=starti-1+KVlen(i);
+    KValue(i,1:KVlen(i))=kvalues(starti:endi);
+end
+
+Velocity_s=kinetic_param(i1+1:i2);
+Act_rate=kinetic_param(i2+1:i3);
+Perm=kinetic_param(i3+1:i4);
+
+
+BallBerrySlopeC4=kinetic_param(end-2);
+BallBerryInterceptC4=kinetic_param(end-1);
+
+Ke_value=load_equilibrium_constant(KE_type);
+Ke_1 = Ke_value(1);
+Ke_3 = Ke_value(2);
+Ke_4 = Ke_value(3);
+Ke_9= Ke_value(4); 
+Ke_10 = Ke_value(5);
+Ke_11 = Ke_value(6);
+Ke_12 = Ke_value(7);
+Ke_13 = Ke_value(8);
+Ke_14 = Ke_value(9);
+Ke_15 = Ke_value(10);
+Ke_16= Ke_value(11);
+Ke_17= Ke_value(12);
+Ke_18 = Ke_value(13);
+Ke_Starch1= Ke_value(14);
+Ke_Starch2= Ke_value(15);
+Ke_Suc1 = Ke_value(16);
+Ke_Suc2 = Ke_value(17);
+Ke_Suc5= Ke_value(18);
+Ke_Suc6= Ke_value(19);
+Ke_Suc7 = Ke_value(20);
+Ke_Suc8 = Ke_value(21);
+Ke_Suc9 = Ke_value(22);
+Ke_Suc3 = Ke_value(23);
+Ke_ATPM = Ke_value(24);
+Ke_NADPHM = Ke_value(25);
+Ke_ATPB = Ke_value(26);
+KePi= Ke_value(27);
+Ke_NADPHB = Ke_value(28);
+Ke_PS4= Ke_value(29);
+Ke_PR6= Ke_value(30);
+Ke_PR7= Ke_value(31);
+Ke_PR8= Ke_value(32);
+Ke_62= Ke_value(33);
+Ke_Sta1= Ke_value(34);
+Ke_Sta2= Ke_value(35);
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%
-global ainter;
-% global KValue;
-global RatioPPDK;
-global Pvpr8M;
-%global I;
-global TIME_M;
-global OLD_TIME_M;
-global Meta_VEL;
-global Para_mata;
-global WeatherTemperature;
-global Air_CO2;
-global WeatherRH;
-global WeatherWind;
-global Radiation_PAR;
-global Radiation_NIR;
-global Radiation_LW;
-global OLD_TIME;
-global TIME_N;
-global Gs_VEL;
-global PhiLeaf;
-global GsResponse;
 
-global VmaxC4;
 R=8.314472E-3;%Gas constant KJ mole^{-1} K^{-1}
 Convert=1E6/(2.35E5); %Convert W m^{-2} to u moles m^{-2} s^{-1}
 Boltzman=5.6697E-8; % Stefan-Boltzmann constant W m^{-2} K^{-4}
@@ -40,9 +117,9 @@ Pressure=101325.0; % Standard atmospheric pressure Pa
 ConstantsCp=29.3;
 Rd25=0.6;%For steasy state model
 PhotosynthesQ10=2;
-I=Radiation_PAR*Convert/1000*0.85;
-% fprintf("time: %4.2f, ight intensity: %4.2f\n", t, Radiation_PAR)
 
+
+I=Radiation_PAR*Convert/1000*0.85;
 %%%%%% Input changing environment %%%%%%%%%
 
 if ~isempty(envFactor.Ca_t)
@@ -50,8 +127,8 @@ if ~isempty(envFactor.Ca_t)
 end
 % fprintf("time: %4.2f, [Ca]: %4.2f\n", t, Air_CO2)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-Ci=s(1);
 
+Ci=s(1);
 Cb=s(2);
 Eb=s(3);
 Gs=s(4);
@@ -62,7 +139,7 @@ LeafTemperature=Tleaf;
 Gsw=1.6*Gs;
 
 TempFactor=TempResponseEnzymes(LeafTemperature);
-%TempFactor=TempResponseEnzymes(WeatherTemperature);
+
 TempCorr_V1=TempFactor(1);
 TempCorr_V2=TempFactor(2);
 TempCorr_V5=TempFactor(3);
@@ -74,10 +151,10 @@ TempCorr_Jmax=TempFactor(8);
 TempCorr_Vm_Enz=TempFactor(9);
 
 % structure to store the Michaelis-Menten kinetic parameters
-KmCO2_1=KValue(1,1);  Ke_1=KValue(1,2);
+KmCO2_1=KValue(1,1);  % Ke_1=KValue(1,2);
 KmHCO3_2=KValue(2,1);  KmPEP_2=KValue(2,2);   Kimal_2=KValue(2,3); Kimal_2n=KValue(2,4);
-KmNADPH_3=KValue(3,1);  KmOAA_3=KValue(3,2);  KmNADP_3=KValue(3,3);  Kmmal_3=KValue(3,4);  Ke_3=KValue(3,5);
-KmCO2_4=KValue(4,1);  KmNADP_4=KValue(4,2);  KmNADPH_4=KValue(4,3);  KmPyr_4=KValue(4,4);  Kmmal_4=KValue(4,5);  Ke_4=KValue(4,6);
+KmNADPH_3=KValue(3,1);  KmOAA_3=KValue(3,2);  KmNADP_3=KValue(3,3);  Kmmal_3=KValue(3,4);  % Ke_3=KValue(3,5);
+KmCO2_4=KValue(4,1);  KmNADP_4=KValue(4,2);  KmNADPH_4=KValue(4,3);  KmPyr_4=KValue(4,4);  Kmmal_4=KValue(4,5);  % Ke_4=KValue(4,6);
 KiPEP_5=KValue(5,1);  KmATP_5=KValue(5,2);  KmPyr_5=KValue(5,3);
 KmCO2_6=KValue(6,1)*TempCorr_KmCO2_6;  KmO2_6=KValue(6,2)*TempCorr_KmO2_6;  KmRuBP_6=KValue(6,3);  KiPGA_6=KValue(6,4);  KiFBP_6=KValue(6,5);  KiSBP_6=KValue(6,6);  KiPi_6=KValue(6,7);  KiNADPH_6=KValue(6,8);
 % changed:
@@ -86,16 +163,16 @@ KmATP_78=KValue(7,1);  KmPGA_78=KValue(7,2); % KmNADPH_78Mchl=KValue(7,1);
 % KmDPGA_8=KValue(8,1);  KmNADPH_8=KValue(8,2);
 KmNADPH_78=KValue(8,1);
 
-Ke_9=KValue(9,1); 
-KmDHAP_10=KValue(10,1);  KmFBP_10=KValue(10,2);  KmGAP_10=KValue(10,3);  Ke_10=KValue(10,4);
-KiF6P_11=KValue(11,1);  KiPi_11=KValue(11,2);  KmFBP_11=KValue(11,3);  Ke_11=KValue(11,4);
-KmDHAP_12=KValue(12,1);  KmE4P_12=KValue(12,2);  Ke_12=KValue(12,3);
-KiPi_13=KValue(13,1);  KmSBP_13=KValue(13,2);  Ke_13=KValue(13,3);
-KmE4P_14=KValue(14,1);  KmF6P_14=KValue(14,2);  KmGAP_14=KValue(14,3);  KmXu5P=KValue(14,4);  Ke_14=KValue(14,5);
-KmGAP_15=KValue(15,1);  KmRi5P_15=KValue(15,2);  KmS7P_15=KValue(15,3);  KmXu5P_15=KValue(15,4);  Ke_15=KValue(15,5);
-Ke_16=KValue(16,1);
-Ke_17=KValue(17,1);
-KiADP_18=KValue(18,1);  Ki_ADP_18=KValue(18,2);  KiPGA_18=KValue(18,3);  KiPi_18=KValue(18,4);  KiRuBP_18=KValue(18,5);  KmATP_18=KValue(18,6);  KmRu5P_18=KValue(18,7);  Ke_18=KValue(18,8);
+% Ke_9=KValue(9,1); 
+KmDHAP_10=KValue(10,1);  KmFBP_10=KValue(10,2);  KmGAP_10=KValue(10,3);  % Ke_10=KValue(10,4);
+KiF6P_11=KValue(11,1);  KiPi_11=KValue(11,2);  KmFBP_11=KValue(11,3);  % Ke_11=KValue(11,4);
+KmDHAP_12=KValue(12,1);  KmE4P_12=KValue(12,2);  % Ke_12=KValue(12,3);
+KiPi_13=KValue(13,1);  KmSBP_13=KValue(13,2);  % Ke_13=KValue(13,3);
+KmE4P_14=KValue(14,1);  KmF6P_14=KValue(14,2);  KmGAP_14=KValue(14,3);  KmXu5P=KValue(14,4);  % Ke_14=KValue(14,5);
+KmGAP_15=KValue(15,1);  KmRi5P_15=KValue(15,2);  KmS7P_15=KValue(15,3);  KmXu5P_15=KValue(15,4);  % Ke_15=KValue(15,5);
+% Ke_16=KValue(16,1);
+% Ke_17=KValue(17,1);
+KiADP_18=KValue(18,1);  Ki_ADP_18=KValue(18,2);  KiPGA_18=KValue(18,3);  KiPi_18=KValue(18,4);  KiRuBP_18=KValue(18,5);  KmATP_18=KValue(18,6);  KmRu5P_18=KValue(18,7);  % Ke_18=KValue(18,8);
 
 % changed:
 % KmADP_7Mchl=KValue(19,1);  KmATP_7Mchl=KValue(19,2);  KmPGA_7Mchl=KValue(19,3);
@@ -104,43 +181,45 @@ KmATP_78Mchl=KValue(19,1);  KmPGA_78Mchl=KValue(19,2);
 KmNADPH_78Mchl=KValue(20,1);
 
 % KiADP_Starch=KValue(21,1);  KmATP_Starch=KValue(21,2);  KmG1P_Starch=KValue(21,3);  KaF6P_Starch=KValue(21,4);  KaFBP_Starch=KValue(21,5);  KaPGA_Starch=KValue(21,6);  Ke_Starch1=KValue(21,7);   Ke_Starch2=KValue(21,8);
-Ke_Starch1=KValue(21,1);   Ke_Starch2=KValue(21,2);
+% Ke_Starch1=KValue(21,1);   Ke_Starch2=KValue(21,2);
 KmPGA_PGASink=KValue(22,1);
-KmDHAP_Suc1=KValue(23,1);  KmGAP_Suc1=KValue(23,2);  KmFBP_Suc1=KValue(23,3);  Ke_Suc1=KValue(23,4);
-KiF26BP_Suc2=KValue(24,1);  KiF6P_Suc2=KValue(24,2);  KiPi_Suc2=KValue(24,3);  KmFBP_Suc2=KValue(24,4);  Ke_Suc2=KValue(24,5);
-Ke_Suc5=KValue(25,1);  Ke_Suc6=KValue(25,2);
-KmG1P_Suc7=KValue(26,1);  KmPPi_Suc7=KValue(26,2);  KmUDPG_Suc7=KValue(26,3);  KmUTP_Suc7=KValue(26,4);  Ke_Suc7=KValue(26,5);
-KiFBP_Suc8=KValue(27,1);  KiPi_Suc8=KValue(27,2);  KiSuc_Suc8=KValue(27,3);  KiSucP_Suc8=KValue(27,4);  KiUDP_Suc8=KValue(27,5);  KmF6P_Suc8=KValue(27,6);  KmUDPG_Suc8=KValue(27,7);  Ke_Suc8=KValue(27,8); 
-KmSuc_Suc9=KValue(28,1);  KmSucP_Suc9=KValue(28,2);  Ke_Suc9=KValue(28,3);
+KmDHAP_Suc1=KValue(23,1);  KmGAP_Suc1=KValue(23,2);  KmFBP_Suc1=KValue(23,3);  % Ke_Suc1=KValue(23,4);
+KiF26BP_Suc2=KValue(24,1);  KiF6P_Suc2=KValue(24,2);  KiPi_Suc2=KValue(24,3);  KmFBP_Suc2=KValue(24,4);  % Ke_Suc2=KValue(24,5);
+% Ke_Suc5=KValue(25,1);  Ke_Suc6=KValue(25,2);
+KmG1P_Suc7=KValue(26,1);  KmPPi_Suc7=KValue(26,2);  KmUDPG_Suc7=KValue(26,3);  KmUTP_Suc7=KValue(26,4);  % Ke_Suc7=KValue(26,5);
+KiFBP_Suc8=KValue(27,1);  KiPi_Suc8=KValue(27,2);  KiSuc_Suc8=KValue(27,3);  KiSucP_Suc8=KValue(27,4);  KiUDP_Suc8=KValue(27,5);  KmF6P_Suc8=KValue(27,6);  KmUDPG_Suc8=KValue(27,7);  % Ke_Suc8=KValue(27,8); 
+KmSuc_Suc9=KValue(28,1);  KmSucP_Suc9=KValue(28,2);  % Ke_Suc9=KValue(28,3);
 KmSuc_Suc10=KValue(29,1);
-KiADP_Suc3=KValue(30,1);  KIDHAP_Suc3=KValue(30,2);  KmATP_Suc3=KValue(30,3);  KmF26BP_Suc3=KValue(30,4);  KmF6P_Suc3=KValue(30,5);  Ke_Suc3=KValue(30,6);
+KiADP_Suc3=KValue(30,1);  KIDHAP_Suc3=KValue(30,2);  KmATP_Suc3=KValue(30,3);  KmF26BP_Suc3=KValue(30,4);  KmF6P_Suc3=KValue(30,5);  % Ke_Suc3=KValue(30,6);
 KiF6P_Suc4=KValue(31,1);  KiPi_Suc4=KValue(31,2);  KmF26BP_Suc4=KValue(31,3);
-KePi=KValue(36,1);
-KmADP_ATPM=KValue(32,1);  KmATP_ATPM=KValue(32,2);  KmPi_ATPM=KValue(32,3);  X=KValue(32,4);  Y=KValue(32,5);  F=KValue(32,6);  Q=KValue(32,7);  D=KValue(32,8); Ke_ATPM=KValue(32,9);
-KmNADP_NADPHM=KValue(33,1);  KmNADPH_NADPHM=KValue(33,2); Ke_NADPHM=KValue(33,3);  E=KValue(33,4);
-KmADP_ATPB=KValue(34,1);  KmPi_ATPB=KValue(34,2);   KmATP_ATPB=KValue(34,3);  Ke_ATPB=KValue(34,4);   G=KValue(34,5);
-KmNADP_NADPHB=KValue(37,1);  KmNADPH_NADPHB=KValue(37,2); Ke_NADPHB=KValue(37,3);
+% KePi=KValue(36,1);
+KmADP_ATPM=KValue(32,1);  KmATP_ATPM=KValue(32,2);  KmPi_ATPM=KValue(32,3);  X=KValue(32,4);  Y=KValue(32,5);  F=KValue(32,6);  Q=KValue(32,7);  D=KValue(32,8); % Ke_ATPM=KValue(32,9);
+KmNADP_NADPHM=KValue(33,1);  KmNADPH_NADPHM=KValue(33,2);  E=KValue(33,3); % Ke_NADPHM=KValue(33,3); 
+KmADP_ATPB=KValue(34,1);  KmPi_ATPB=KValue(34,2);   KmATP_ATPB=KValue(34,3); G=KValue(34,4);  % Ke_ATPB=KValue(34,5);   
+KmNADP_NADPHB=KValue(37,1);  KmNADPH_NADPHB=KValue(37,2); % Ke_NADPHB=KValue(37,3);
 % Voaa=KValue(35,1);  Vmal=KValue(35,2);  Vpyr=KValue(35,3);  Vpep=KValue(35,4);  Vt=KValue(35,5);  Vleak=KValue(35,6); Vpga=KValue(35,7);
 Km_OAA_M=KValue(35,1);  Kimal_OAA_M=KValue(35,2);  Km_MAL_M=KValue(35,3);  KiOAA_MAL_M=KValue(35,4); Km_MAL_B=KValue(35,5); Km_PYR_B=KValue(35,6);  Km_PYR_M=KValue(35,7); Km_PEP_M=KValue(35,8); 
 
-KmCO2_PR1=KValue(38,1)*TempCorr_KmCO2_6; KmO2_PR1=KValue(38,2)*TempCorr_KmO2_6;  KmRuBP_PR1=KValue(38,3);  KiPGA_PR1=KValue(38,4);  KiFBP_PR1=KValue(38,5);  KiSBP_PR1=KValue(38,6);  KiPi_PR1=KValue(38,7);  KiNADPH_PR1=KValue(38,8);
+KmCO2_PR1=KValue(6,1)*TempCorr_KmCO2_6; KmO2_PR1=KValue(6,2)*TempCorr_KmO2_6;  KmRuBP_PR1=KValue(6,3);  KiPGA_PR1=KValue(6,4);  KiFBP_PR1=KValue(6,5);  KiSBP_PR1=KValue(6,6);  KiPi_PR1=KValue(6,7);  KiNADPH_PR1=KValue(6,8);
+% KmCO2_PR1=KValue(38,1)*TempCorr_KmCO2_6; KmO2_PR1=KValue(38,2)*TempCorr_KmO2_6;  KmRuBP_PR1=KValue(38,3);  KiPGA_PR1=KValue(38,4);  KiFBP_PR1=KValue(38,5);  KiSBP_PR1=KValue(38,6);  KiPi_PR1=KValue(38,7);  KiNADPH_PR1=KValue(38,8);
+
 KmPGCA_PR2=KValue(39,1);  KiPI_PR2=KValue(39,2);  KiGCA_PR2=KValue(39,3);
 KmGCA_PR3=KValue(40,1);
-Ke_PS4=KValue(41,1);  KmGOA_PS4=KValue(41,2);  KmGLU_PS4=KValue(41,3);  KiGLY_PS4=KValue(41,4);
+KmGOA_PS4=KValue(41,1);  KmGLU_PS4=KValue(41,2);  KiGLY_PS4=KValue(41,3); % Ke_PS4=KValue(41,1); 
 KmGLY_PS5=KValue(42,1);  KiSER_PS5=KValue(42,2);
-Ke_PR6=KValue(43,1);  KmGOA_PR6=KValue(43,2);  KmSER_PR6=KValue(43,3);  KmGLY_PR6=KValue(43,4);
-Ke_PR7=KValue(44,1);  KiHPR_PR7=KValue(44,2);  KmHPR_PR7=KValue(44,3);
-Ke_PR8=KValue(45,1);  KmATP_PR8=KValue(45,2);  KmGCEA_PR8=KValue(45,3);  KiPGA_PR8=KValue(45,4);
+KmGOA_PR6=KValue(43,1);  KmSER_PR6=KValue(43,2);  KmGLY_PR6=KValue(43,3); % Ke_PR6=KValue(43,1);  
+KiHPR_PR7=KValue(44,1);  KmHPR_PR7=KValue(44,2); % Ke_PR7=KValue(44,1);  
+KmATP_PR8=KValue(45,1);  KmGCEA_PR8=KValue(45,2);  KiPGA_PR8=KValue(45,3);%  Ke_PR8=KValue(45,1);  
 KmGCA_PR9=KValue(46,1);  KiGCEA_PR9=KValue(46,2);
 KmGCEA_PR10=KValue(47,1);  KiGCA_PR10=KValue(47,2);
-KmPGA_62=KValue(48,1); KmPEP_62=KValue(48,2); Ke_62=KValue(48,3);
+KmPGA_62=KValue(48,1); KmPEP_62=KValue(48,2); %  Ke_62=KValue(48,3);
 
 % new:
 Kcat_EA_PPDKRP_I= KValue(49,1); Km_EA_PPDKRP_I_ADP=KValue(49,2); Ki_EA_PPDKRP_I_Pyr=KValue(49,3); Km_EA_PPDKRP_I_E=KValue(49,4);
 Kcat_EA_PPDKRP_A= KValue(50,1); Km_EA_PPDKRP_A_Pi= KValue(50,2); Ki_EA_PPDKRP_A_AMP=KValue(50,3); Km_EA_PPDKRP_A_EP=KValue(50,4); Ki_EA_PPDKRP_A_ADP=KValue(50,5); Ki_EA_PPDKRP_A_PPI=KValue(50,6);
 
-KaPGA_Sta1=KValue(51,1); KmG1P_Sta1=KValue(51,2); KmATP_Sta1=KValue(51,3); KIAPi_ATP_Sta1=KValue(51,4); KmPPi_Sta1=KValue(51,5); KICPP1_ATP_Sta1=KValue(51,6); KmADPG_Sta1=KValue(51,7); KIAADP_ATP_Sta1=KValue(51,8); Ke_Sta1=KValue(51,9); 
-KmPPi_Sta2=KValue(52,1); Ke_Sta2=KValue(52,2);
+KaPGA_Sta1=KValue(51,1); KmG1P_Sta1=KValue(51,2); KmATP_Sta1=KValue(51,3); KIAPi_ATP_Sta1=KValue(51,4); KmPPi_Sta1=KValue(51,5); KICPP1_ATP_Sta1=KValue(51,6); KmADPG_Sta1=KValue(51,7); KIAADP_ATP_Sta1=KValue(51,8); %  Ke_Sta1=KValue(51,9); 
+KmPPi_Sta2=KValue(52,1); %  Ke_Sta2=KValue(52,2);
 KmADPG_Sta3=KValue(53,1); 
 Kmpi_hexp=KValue(54,1); Kmhexp_hexp=KValue(54,2);
 
@@ -269,7 +348,7 @@ Vm_NADPHM=Velocity_s(27)*TempCorr_Vm_Enz;
 Vm_ATPB=Velocity_s(28)*TempCorr_Vm_Enz;
 Vm_NADPHB=Velocity_s(29)*TempCorr_Vm_Enz;
 %Vm_PR1=Vm_6*0.11*TempCorr_Vm_OC;
-Vm_PR1_ratio=Velocity_s(30);
+Vm_PR1=Velocity_s(30)*TempCorr_Vm_OC;
 Vm_PR2=Velocity_s(31)*TempCorr_Vm_Enz;
 Vm_PR3=Velocity_s(32)*TempCorr_Vm_Enz;
 Vm_PR4=Velocity_s(33)*TempCorr_Vm_Enz;
@@ -302,12 +381,7 @@ Ppyr=Perm(2)*TempCorr_Vm_Enz;
 Pco2=Perm(3)*TempCorr_Vm_Enz;
 PC3P=Perm(4)*TempCorr_Vm_Enz;
 Pco2_B=Perm(5)*TempCorr_Vm_Enz;
-
-Bper_GLU=Perm(6);
-Bper_KG=Perm(7);
-Bper_NADH=Perm(8);
-Bper_NAD=Perm(9);
-gm=Perm(10);
+gm=Perm(6);
 
 
 
@@ -322,21 +396,12 @@ tao_ActNADPMDH=Act_rate(7);
 KaRac=Act_rate(8);
 tao_ActRubisco=Act_rate(9);
 tao_ActRca =Act_rate(10);
-% global gm
 
-% gm=3;
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-global Bchl_CA;%assume constant concentration
-global Bchl_CN;
-global Bchl_CP;
-global MC_CU;
-global MC_CA;
-global MC_CP;
-global MC_UTP;
-global Mchl_CP;
-global Mchl_CA;
-global Mchl_CN;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 Mchl_NADP = Mchl_CN-Mchl_NADPH;
 Mchl_Pi = Mchl_CP-Mchl_PGA-2*Mchl_DPGA-Mchl_T3P-Mchl_ATP-Mchl_PEP;
 Mchl_GAP = Ke_9*Mchl_T3P/(1+Ke_9);
@@ -362,8 +427,8 @@ Bchl_Ru5P = Bchl_Pent/(1/Ke_16+1/Ke_17+1);
 Bchl_Ri5P = (Bchl_Pent/Ke_16)/(1/Ke_16+1/Ke_17+1);
 
 Bchl_Pi = Bchl_CP-Bchl_PGA-2*Bchl_DPGA-Bchl_T3P-2*Bchl_FBP-Bchl_HexP-Bchl_E4P-2*Bchl_SBP-Bchl_S7P-Bchl_Pent-2*Bchl_RuBP-Bchl_ATP-Bchl_PGCA-Bchl_PPi-Bchl_PEP;%%%WY
-global Pim;
-Pim=Bchl_Pi;
+
+ % Pim not used
 Bchl_GAP = Ke_9*Bchl_T3P/(1+Ke_9);
 Bchl_DHAP = Bchl_T3P/(1+Ke_9);
 Bchl_G6P = Bchl_HexP/(1/Ke_Starch1+Ke_Starch2+1);
@@ -372,7 +437,7 @@ Bchl_F6P = (Bchl_HexP/Ke_Starch1)/(1/Ke_Starch1+Ke_Starch2+1);
 Bchl_ADP = Bchl_CA-Bchl_ATP-Bchl_ADPG;
 Bmito_NAD=1-Bmito_NADH;
 
-global CI;
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %Enzyme activation %WY 201902
 %PPDK
@@ -380,24 +445,13 @@ global CI;
 AMP=0;
 PPi=0;
 ET_PKRP=PPDKRP;%0.000025*3;%%%change 0.0001
-% Kcat_EA_PPDKRP_I= 1.125; % s-1
-% Kcat_EA_PPDKRP_A= 0.578; % s-1
-% % inactivation
-% Km_EA_PPDKRP_I_ADP=0.052; %mM
-% Ki_EA_PPDKRP_I_Pyr=0.08;
-% Km_EA_PPDKRP_I_E=0.0012;
-% % activation
-% Km_EA_PPDKRP_A_Pi= 0.65;
-% Ki_EA_PPDKRP_A_AMP=0.4;
-% Km_EA_PPDKRP_A_EP=0.0007;
-% Ki_EA_PPDKRP_A_ADP=0.085;
-% Ki_EA_PPDKRP_A_PPI=0.16;
+
 % inactivation rate
 vEA_PPDKRP_I =ET_PKRP*Kcat_EA_PPDKRP_I* E_PPDK_Mchl*Mchl_ADP/ ((E_PPDK_Mchl+Km_EA_PPDKRP_I_E)*(Mchl_ADP+ Km_EA_PPDKRP_I_ADP*(1+Mchl_pyruvate/ Ki_EA_PPDKRP_I_Pyr)));
 % activation rate
 vEA_PPDKRP_A= ET_PKRP*Kcat_EA_PPDKRP_A* EP_PPDK_Mchl*Mchl_Pi/(( EP_PPDK_Mchl+ Km_EA_PPDKRP_A_EP*(1+Mchl_ADP/ Ki_EA_PPDKRP_A_ADP+PPi/ Ki_EA_PPDKRP_A_PPI))*( Mchl_Pi+ Km_EA_PPDKRP_A_Pi*(1+AMP/ Ki_EA_PPDKRP_A_AMP)));
 A_PPDK=E_PPDK_Mchl/(E_PPDK_Mchl+EP_PPDK_Mchl);
-if EAPPDK==1
+if setting.EAPPDK==1
     Vm_5=Vm_5*A_PPDK;
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -418,7 +472,7 @@ ActPEPC0=0.0017*I*1000/0.85+0.05;
 ActFBPase0=0.0017*I*1000/0.85+AACCC;
 ActSBPase0=0.0017*I*1000/0.85+AACCC;
 ActGAPDH0=0.0017*I*1000/0.85+AACCC;
-ActPRK0=0.0017*I*1000/0.85/+AACCC;
+ActPRK0=0.0017*I*1000/0.85+AACCC;
 ActATPsyn0=0.0017*I*1000/0.85+AACCC;
 ActNADPMDH0=0.0017*I*1000/0.85+0.05;
 
@@ -445,23 +499,6 @@ if ActNADPMDH0>1
 end
 
 
-% tao_ActPEPC =60*Tao_PEPC;
-% tao_ActFBPase =1.878*60;%1.878*60;
-% tao_ActSBPase =3.963*60;%3.963*60;
-% tao_ActATPsynthase=0.5*60;
-% tao_ActGAPDH=1*60/10;
-% tao_ActPRK=1*60/10;
-% tao_ActNADPMDH=0.965*60*Tao_MDH;%0.5*60*4*Tao_MDH;
-% KaRac=12.4;%mg m-2
-% tao_ActRubisco=taoRub*60;%2.5;%KTaoRac/Rac; % s
-% kcat_ATPsyn=16;
-% kcat_NADPMDH=1520;
-% kcat_PEPC=66;
-% kcat_Rubisco=4.1;
-% Kcat_GAPDH=50;
-% kcat_FBP=22.9;
-% kcat_SBP=81;
-% kcat_PRK=615;
 
 vATPsynthase_Act_Mchl=(ActATPsyn0-Mchl_ActATPsynthase)*1/tao_ActATPsynthase;%*Vm_ATPM/kcat_ATPsyn;
 vNADPMDH_Act=(ActNADPMDH0-Mchl_ActNADPMDH)*1/tao_ActNADPMDH;%*Vm_3/kcat_NADPMDH;
@@ -486,7 +523,7 @@ vPRK_Act=(ActPRK0-Bchl_ActPRK)*1/tao_ActPRK;
 
 Vm_ATPM=Mchl_ActATPsynthase*Vm_ATPM;
 
-if RedoxEnyAct==1
+if setting.RedoxEnyAct==1
     Vm_3=Mchl_ActNADPMDH*Vm_3;
     Vm_2=Mchl_ActPEPC*Vm_2;
     % fprintf("time: %4.2f, Vm_2: %4.2f\n", t, Vm_2)
@@ -497,77 +534,55 @@ if RedoxEnyAct==1
     Vm_13=(Bchl_ActSBPase)*Vm_13;
     Vm_18=(Bchl_ActPRK)*Vm_18;
 end
-global PRac
+
 Rac=216.9/tao_ActRubisco*60;%%216.9 min mg m-2
 ActRubisco0=Rac*Bchl_ActRCA/(KaRac+Rac*Bchl_ActRCA);
 vRubisco_Act=(ActRubisco0-Bchl_ActRubisco)*1/tao_ActRubisco;%;
 if PRac==1
     Vm_6=(Bchl_ActRubisco)*Vm_6;
+    Vm_PR1=(Bchl_ActRubisco)*Vm_PR1;
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% global Bper_GLU;
-% global Bper_KG;
-% global Bper_NADH;
-% global Bper_NAD;
 
 Sc=3*10^4;%3.36*10^4;%ubarL/mmolubarL/mmol
 vs=20;% m2/L
 
 if Para_mata==0
-    vinf=gm*Sc*10^(-3)*(CI-MC_CO2);
+    vinf=gm*Sc*10^(-3)*(envFactor.CI-MC_CO2);
 end
 if Para_mata==1
     vinf=gm*Sc*10^(-3)*(Ci/(3 * 10^4)-MC_CO2);
 end
 
-%C4 Cycle 5
-global v1;
+%%%%%%%%%%%%%%%%%%%%%%%% C4 Cycle 5 %%%%%%%%%%%%%%%%%%%%%%%%
+
 v1=Vm_1*(MC_CO2-MC_HCO3/Ke_1)/(KmCO2_1+MC_CO2);
 
-global v2;
-% Kimal_2=15;
-% Kimal_2n=1.5;
 Vm_2P=Mchl_ActPEPC*Vm_2;
 Vm_2OH=Vm_2-Vm_2P;
 v_2P=Vm_2*MC_HCO3*MC_PEP/(MC_PEP+KmPEP_2*(1+MC_malate/Kimal_2+MC_OAA/1))/(MC_HCO3+KmHCO3_2);
 v_2OH=Vm_2OH*MC_HCO3*MC_PEP/(MC_PEP+KmPEP_2*(1+MC_malate/(Kimal_2n)+MC_OAA/1))/(MC_HCO3+KmHCO3_2);
 v2=v_2P+v_2OH;
 
-global v3;
+
 v3=Vm_3*(Mchl_OAA*Mchl_NADPH-Mchl_NADP*Mchl_malate/Ke_3)/( KmOAA_3* KmNADPH_3*(1+Mchl_OAA/KmOAA_3+ Mchl_NADPH/KmNADPH_3+ Mchl_NADP/KmNADP_3+ Mchl_malate/Kmmal_3+ Mchl_OAA*Mchl_NADPH/(KmOAA_3* KmNADPH_3)+ Mchl_NADP*Mchl_malate/(KmNADP_3* Kmmal_3)));
 
-global v4;
 v4=Vm_4*(Bchl_malate*Bchl_NADP-Bchl_pyruvate*Bchl_NADPH*Bchl_CO2/Ke_4)/(Kmmal_4*KmNADP_4)/(1+Bchl_malate/Kmmal_4+Bchl_NADP/KmNADP_4+Bchl_pyruvate/KmPyr_4+Bchl_NADPH/KmNADPH_4+Bchl_CO2/KmCO2_4+Bchl_malate*Bchl_NADP/(Kmmal_4*KmNADP_4)+Bchl_pyruvate*Bchl_NADPH/(KmPyr_4*KmNADPH_4)+Bchl_pyruvate*Bchl_CO2/(KmPyr_4*KmCO2_4)+Bchl_NADPH*Bchl_CO2/(KmNADPH_4*KmCO2_4)+Bchl_pyruvate*Bchl_NADPH*Bchl_CO2/(KmPyr_4*KmNADPH_4*KmCO2_4));
-global v5;
+
 v5=Vm_5*Mchl_pyruvate*Mchl_ATP/(Mchl_pyruvate+KmPyr_5*(1+Mchl_PEP/KiPEP_5))/(Mchl_ATP+KmATP_5);
-%%%% PPDK in BSC
-global v5B;
+
 Vm_5B=RatioPPDK*Vm_5;
 v5B=Vm_5B*Bchl_pyruvate*Bchl_ATP/(Bchl_pyruvate+KmPyr_5*(1+Bchl_PEP/KiPEP_5))/(Bchl_ATP+KmATP_5);
-%%%%%
-% % % Calvin cycle 
-global v6;
+
+%%%%%%%%%%%%%%%%%%%%%%%% Calvin cycle %%%%%%%%%%%%%%%%%%%%%%%%
+
 v6=Vm_6*Bchl_RuBP*Bchl_CO2/((Bchl_CO2+KmCO2_6*(1+Bchl_O2/KmO2_6))*(Bchl_RuBP+KmRuBP_6*(1+Bchl_PGA/KiPGA_6+Bchl_FBP/KiFBP_6+Bchl_SBP/KiSBP_6+Bchl_Pi/ KiPi_6)));
 v7=0;%Not used 
 v8=0;%Not used 
 
-global v78;
-% KmPGA_78=5;
-% KmATP_78=0.3;
-
-% KmNADPH_78=0.1;
-% KmADP_78=0.5;
-% KmNADP_78=0.5;
-%v78=Vm_78*(Bchl_PGA*Bchl_ATP*Bchl_NADPH)/((Bchl_PGA+KmPGA_78)*(Bchl_ATP+KmATP_78*(1+Bchl_ADP/KmADP_78))*(Bchl_NADPH+KmNADPH_78*(1+Bchl_NADP/KmNADP_78)));
 v78=Vm_78*(Bchl_PGA*Bchl_ATP*Bchl_NADPH)/((Bchl_PGA+KmPGA_78)*(Bchl_ATP+KmATP_78)*(Bchl_NADPH+KmNADPH_78));
-global v10;
-global v11;
-global v12;
-global v13;
-global v14;
-global v15;
-global v18;
+
 v10=Vm_10*(Bchl_GAP*Bchl_DHAP-Bchl_FBP/Ke_10)/(KmGAP_10*KmDHAP_10*(1+Bchl_GAP/KmGAP_10+Bchl_DHAP/KmDHAP_10+Bchl_FBP/KmFBP_10+Bchl_GAP*Bchl_DHAP/(KmGAP_10*KmDHAP_10)));
 v11=Vm_11*(Bchl_FBP-Bchl_F6P*Bchl_Pi/Ke_11)/(Bchl_FBP+KmFBP_11*(1+Bchl_F6P/KiF6P_11+Bchl_Pi/KiPi_11));
 v12=Vm_12*(Bchl_DHAP*Bchl_E4P-Bchl_SBP/Ke_12)/((Bchl_E4P+KmE4P_12)*(Bchl_DHAP+KmDHAP_12));
@@ -577,44 +592,21 @@ v15=Vm_15*(Bchl_GAP*Bchl_S7P-Bchl_Ri5P*Bchl_Xu5P/Ke_15)/((Bchl_GAP+KmGAP_15*(1+B
 v18=Vm_18*(Bchl_ATP*Bchl_Ru5P-Bchl_ADP*Bchl_RuBP/Ke_18)/((Bchl_ATP*(1+Bchl_ADP/KiADP_18)+KmATP_18*(1+Bchl_ADP/Ki_ADP_18))*(Bchl_Ru5P+KmRu5P_18*(1+Bchl_PGA/KiPGA_18+Bchl_RuBP/KiRuBP_18+Bchl_Pi/KiPi_18)));
 v7Mchl=0;%Not used;
 v8Mchl=0;%Not used ;
-global v78Mchl;
-% KmPGA_78Mchl=5;
-% KmATP_78Mchl=0.3;
-% KmNADPH_78Mchl=0.1;
-% KmADP_78Mchl=0.5;
-% KmNADP_78Mchl=0.5;
 
 v78Mchl=Vm_78Mchl*(Mchl_PGA*Mchl_ATP*Mchl_NADPH)/((Mchl_PGA+KmPGA_78Mchl)*(Mchl_ATP+KmATP_78Mchl)*(Mchl_NADPH+KmNADPH_78Mchl));
-% vStarch1=Vm_Starch*Bchl_G1P*Bchl_ATP/((Bchl_G1P+KmG1P_Starch)*((1+Bchl_ADP/KiADP_Starch)*(Bchl_ATP+KmATP_Starch)+KmATP_Starch*Bchl_Pi/(KaPGA_Starch*Bchl_PGA+KaF6P_Starch*Bchl_F6P+KaFBP_Starch*Bchl_FBP)));
-% KmATP_Starch2=1;
-% Vm_Starch2=0.1/20;
-% KmStarch_Starch2=1;
+
 vStarch1=0;
 vStarch2=0;%Not used 
 
-%  2.7.7.27
-% KaPGA_Sta1=0.2;%0.2252;
-% KmG1P_Sta1=0.06;%0.06;
-% KmATP_Sta1=0.12;%0.18
-% KIAPi_ATP_Sta1=2.96;
-% KmPPi_Sta1=0.033;
-% KICPP1_ATP_Sta1=13.8E-4;
-% KmADPG_Sta1=0.24;
-% KIAADP_ATP_Sta1=2.0;
-% Ke_Sta1=1.1;
-
-global vSta1;
 Vm_Sta1=Vm_Sta1*Bchl_PGA/(Bchl_PGA+KaPGA_Sta1);
 vSta1=Vm_Sta1*(Bchl_G1P*Bchl_ATP-Bchl_ADPG*Bchl_PPi/Ke_Sta1)/(KmG1P_Sta1*KmATP_Sta1*(1+Bchl_ADP/KIAADP_ATP_Sta1+Bchl_PPi/KICPP1_ATP_Sta1+Bchl_Pi/KIAPi_ATP_Sta1)*(1+Bchl_G1P/KmG1P_Sta1+Bchl_ATP*(1+Bchl_Pi/KIAPi_ATP_Sta1+Bchl_ADP/KIAADP_ATP_Sta1)/(KmATP_Sta1*(1+Bchl_ADP/KIAADP_ATP_Sta1+Bchl_PPi/KICPP1_ATP_Sta1+Bchl_Pi/KIAPi_ATP_Sta1))+Bchl_ADPG/KmADPG_Sta1+Bchl_PPi/KmPPi_Sta1+Bchl_G1P*Bchl_ATP*(1+Bchl_Pi/KIAPi_ATP_Sta1+Bchl_ADP/KIAADP_ATP_Sta1)/(KmG1P_Sta1*KmATP_Sta1*(1+Bchl_ADP/KIAADP_ATP_Sta1+Bchl_PPi/KICPP1_ATP_Sta1+Bchl_Pi/KIAPi_ATP_Sta1))+Bchl_ADPG*Bchl_PPi/(KmADPG_Sta1*KmPPi_Sta1)));
-%  3.6.1.1
-% KmPPi_Sta2=0.154;
-% Ke_Sta2=15700.0;
+
 vSta2=Vm_Sta2*(Bchl_PPi-Bchl_Pi*Bchl_Pi/Ke_Sta2)/(Bchl_PPi+KmPPi_Sta2);
 
 %  2.4.1.21
 % KmADPG_Sta3=0.077;
 vSta3=Vm_Sta3*Bchl_ADPG/(Bchl_ADPG+KmADPG_Sta3);
-global vStarch;
+
 vStarch=vSta3;
 
 
@@ -633,26 +625,25 @@ vhexp=Vm_Hep*(Bchl_Pi/(Kmpi_hexp*(1+Bchl_HexP/Kmhexp_hexp)+Bchl_Pi));
 if Bchl_HexP>6
     vhexp=0;
 end
-global vHexP;
+
 vHexP=vhexp;
 vPGASink=Vm_PGASink*MC_PGA/(MC_PGA+KmPGA_PGASink);%MC
-global vpgasink;
+
 vpgasink=vPGASink;
-global vSuc1;
+
 vSuc1=Vm_Suc1*(MC_GAP*MC_DHAP-MC_FBP/Ke_Suc1)/(KmGAP_Suc1*KmDHAP_Suc1*(1+MC_GAP/KmGAP_Suc1+MC_DHAP/KmDHAP_Suc1+MC_FBP/KmFBP_Suc1+MC_GAP*MC_DHAP/(KmGAP_Suc1*KmDHAP_Suc1)));
 vSuc2=Vm_Suc2*(MC_FBP-MC_F6P*MC_Pi/Ke_Suc2)/(KmFBP_Suc2*(1+MC_F26BP/KiF26BP_Suc2)*(1+MC_FBP/(KmFBP_Suc2*(1+MC_F26BP/KiF26BP_Suc2))+MC_Pi/KiPi_Suc2+MC_F6P/KiF6P_Suc2+MC_Pi*MC_F6P/(KiPi_Suc2*KiF6P_Suc2)));
 vSuc7=Vm_Suc7*(MC_UTP*MC_G1P-MC_UDPG*MC_PPi/Ke_Suc7)/(KmUTP_Suc7*KmG1P_Suc7*(1+MC_UTP/KmUTP_Suc7+MC_G1P/KmG1P_Suc7+MC_UDPG/KmUDPG_Suc7+MC_PPi/KmPPi_Suc7+MC_UTP*MC_G1P/(KmUTP_Suc7*KmG1P_Suc7)+MC_UDPG*MC_PPi/(KmUDPG_Suc7*KmPPi_Suc7)));
 vSuc8=Vm_Suc8*(MC_F6P*MC_UDPG-MC_SUCP*MC_UDP/Ke_Suc8)/((MC_F6P+KmF6P_Suc8*(1+MC_FBP/KiFBP_Suc8))*(MC_UDPG+KmUDPG_Suc8*(1+MC_UDP/KiUDP_Suc8)*(1+MC_SUCP/KiSucP_Suc8)*(1+MC_SUC/KiSuc_Suc8)*(1+MC_Pi/KiPi_Suc8)));
 vSuc9=Vm_Suc9*(MC_SUCP-MC_SUC*MC_Pi/Ke_Suc9)/(MC_SUCP+KmSucP_Suc9*(1+MC_SUC/KmSuc_Suc9));
-vSuc10=Vm_Suc10*MC_SUC/(MC_SUC+KmSuc_Suc10);
-global vSuc;
+vSuc10=Vm_Suc10*MC_SUC/(MC_SUC+KmSuc_Suc10); % sucrose sink reaction
+
 vSuc= vSuc10;
 vSuc3=Vm_Suc3*(MC_ATP*MC_F6P-MC_ADP*MC_F26BP/Ke_Suc3)/((MC_F6P+KmF6P_Suc3*(1+MC_F26BP/KmF26BP_Suc3)*(1+MC_DHAP/KIDHAP_Suc3))*(MC_ATP+KmATP_Suc3*(1+MC_ADP/KiADP_Suc3)));
 vSuc4=Vm_Suc4*MC_F26BP/(KmF26BP_Suc4*(1+MC_F26BP/KmF26BP_Suc4)*(1+MC_Pi/KiPi_Suc4)*(1+MC_F6P/KiF6P_Suc4));
 
 %ATP&NADPH 3
-global ETRa;
-global ETRn;
+
 ETRa=D*((F/2*X*I+Y*Jmax-sqrt((F/2*X*I+Y*Jmax)^2-4*Q*F/2*X*I*Y*Jmax))/(2*Q));
 ETRn=E*((F/2*X*I+Y*Jmax-sqrt((F/2*X*I+Y*Jmax)^2-4*Q*F/2*X*I*Y*Jmax))/(2*Q));
 vATPM=min(Vm_ATPM,ETRa)*(Mchl_ADP*Mchl_Pi-Mchl_ATP/(Ke_ATPM))/(KmADP_ATPM*KmPi_ATPM*(1+Mchl_ADP/KmADP_ATPM+Mchl_Pi/KmPi_ATPM+Mchl_ATP/KmATP_ATPM+Mchl_ADP*Mchl_Pi/(KmADP_ATPM*KmPi_ATPM)));
@@ -662,14 +653,7 @@ vNADPHM=min(Vm_NADPHM,ETRn)*(Mchl_NADP-Mchl_NADPH/Ke_NADPHM)/(KmNADP_NADPHM*(1+M
 % vNADPHM=min(Vm_NADPHM*(Mchl_NADP-Mchl_NADPH/Ke_NADPHM)/(KmNADP_NADPHM*(1+Mchl_NADP/KmNADP_NADPHM+Mchl_NADPH/KmNADPH_NADPHM)),ETRn);
 
 
-global vO2_Mchl;
 vO2_Mchl=vNADPHM/2;
-
-global U;
-global V;
-global ETRab
-global ETRabl;
-global ETRnbl;
 
 ETRab=G*((F*(1-U)*(1-X)*I+(1-V)*(1-Y)*Jmax-sqrt((F*(1-U)*(1-X)*I+(1-V)*(1-Y)*Jmax)^2-4*Q*F*(1-U)*(1-X)*I*(1-V)*(1-Y)*Jmax))/(2*Q));
 ETRabl=D*((F/2*U*(1-X)*I+V*(1-Y)*Jmax-sqrt((F/2*U*(1-X)*I+V*(1-Y)*Jmax)^2-4*Q*F/2*U*(1-X)*I*V*(1-Y)*Jmax))/(2*Q));
@@ -679,59 +663,37 @@ vATPB=min(Vm_ATPB,ETRab+ETRabl)*(Bchl_ADP*Bchl_Pi-Bchl_ATP/Ke_ATPB)/(KmADP_ATPB*
 vNADPHB=min(Vm_NADPHB,ETRnbl)*(Bchl_NADP-Bchl_NADPH/Ke_NADPHB)/(KmNADP_NADPHB*(1+Bchl_NADP/KmNADP_NADPHB+Bchl_NADPH/KmNADPH_NADPHB));
 % vATPB=min(Vm_ATPB*(Bchl_ADP*Bchl_Pi-Bchl_ATP/Ke_ATPB)/(KmADP_ATPB*KmPi_ATPB*(1+Bchl_ADP/KmADP_ATPB+Bchl_Pi/KmPi_ATPB+Bchl_ATP/KmATP_ATPB+Bchl_ADP*Bchl_Pi/(KmADP_ATPB*KmPi_ATPB))),ETRab+ETRabl);
 % vNADPHB=min(Vm_NADPHB*(Bchl_NADP-Bchl_NADPH/Ke_NADPHB)/(KmNADP_NADPHB*(1+Bchl_NADP/KmNADP_NADPHB+Bchl_NADPH/KmNADPH_NADPHB)),ETRnbl);
-global vO2_Bchl;
+
 vO2_Bchl=vNADPHB/2;
 %Transport 17
-global vOAA_M;
-% Km_OAA_M=0.053;
-% Kimal_OAA_M=7.5;
+
 vOAA_M=Vm_OAA_M*(MC_OAA-Mchl_OAA)/(MC_OAA+Km_OAA_M*(1+MC_malate/Kimal_OAA_M));
 
-global vMAL_M;
-global vMAL;
-global vMAL_B;
 
-% Km_MAL_M=0.5;
-% KiOAA_MAL_M=0.3;%0.3;
-% Vm_MAL_B=3/20;
-% Km_MAL_B=1;
 vMAL_M=Vm_MAL_M*(Mchl_malate-MC_malate)/(Mchl_malate+Km_MAL_M*(1+Mchl_OAA/KiOAA_MAL_M));% 2  Mchl_malate -> MC.malate
 vMAL=Pmal*(MC_malate-BSC_malate);% 3 MC_malate -> BSC_malate
 vMAL_B=Vm_MAL_B*(BSC_malate-Bchl_malate)/(BSC_malate+Km_MAL_B);% 4 BSC_malate -> Bchl_malate
 
-% Km_PYR_B=0.1;
+
 vPYR_B=Vm_PYR_B*(Bchl_pyruvate-BSC_pyruvate/10)/(Km_PYR_B+Bchl_pyruvate);
 
-global vPYR;
 vPYR=Ppyr*(BSC_pyruvate-MC_pyruvate);% 6 BSC_pyruvate -> MC_pyruvate
-
 
 vPYR_M=Vm_PYR_M*(MC_pyruvate-Mchl_pyruvate/10)/(Km_PYR_M+MC_pyruvate);
 
-global vPEP_M;
-global vPEP_B;
 
 vPEP_M=Vm_PEP_M*(Mchl_PEP-MC_PEP)/(Km_PEP_M+Mchl_PEP); % 8 Mchl_PEP + MC_Pi -> MC_PEP + Mchl_Pi
 vPEP_B=Vm_PEP_B*(Bchl_PEP-BSC_PEP)/(Km_PEP_M+Bchl_PEP);
 
-global vPGA_B;
-global vDHAP_B;
-global vGAP_B;
 
 vPGA_B = Vtp_Bchl * Bchl_PGA/(Bchl_PGA + KmPGA_B * ( 1 + Bchl_DHAP/KmDHAP_B) * ( 1 + Bchl_GAP/KmGAP_B))-Vtp_Bchl * BSC_PGA/(BSC_PGA + KmPGA_B * ( 1 + BSC_DHAP/KmDHAP_B) * ( 1 + BSC_GAP/KmGAP_B));  
 vGAP_B = Vtp_Bchl * BSC_GAP/(BSC_GAP + KmGAP_B * ( 1 + BSC_PGA/KmPGA_B) * ( 1 + BSC_DHAP/KmDHAP_B))-Vtp_Bchl * Bchl_GAP/(Bchl_GAP + KmGAP_B * ( 1 + Bchl_PGA/KmPGA_B) * ( 1 + Bchl_DHAP/KmDHAP_B));
 vDHAP_B= Vtp_Bchl * BSC_DHAP/(BSC_DHAP + KmDHAP_B * ( 1 + BSC_PGA/KmPGA_B) * ( 1 + BSC_GAP/KmGAP_B))- Vtp_Bchl * Bchl_DHAP/(Bchl_DHAP + KmDHAP_B * ( 1 + Bchl_PGA/KmPGA_B) * ( 1 + Bchl_GAP/KmGAP_B));
 
-global vPGA;
-global vDHAP;
-global vGAP;
 
 vPGA=PC3P*(BSC_PGA-MC_PGA); % 10 BSC_PGA+MC.Pi -> MC.PGA+BSC_Pi
 vGAP=PC3P*(MC_GAP-BSC_GAP); % 13 MC_GAP+BSC_Pi ->BSC_GAP+MC_Pi
 vDHAP=PC3P*(MC_DHAP-BSC_DHAP); % 16 MC_DHAP+BSC_Pi ->BSC_DHAP+MC_Pi
-global vPGA_M;
-global vDHAP_M;
-global vGAP_M;
 
 
 vPGA_M=Vtp_Mchl * MC_PGA/(MC_PGA + KmPGA_M * ( 1 + MC_DHAP/KmDHAP_M) * ( 1 + MC_GAP/KmGAP_M))-Vtp_Mchl * Mchl_PGA/(Mchl_PGA + KmPGA_M * ( 1 + Mchl_DHAP/KmDHAP_M) * ( 1 + Mchl_GAP/KmGAP_M));
@@ -740,16 +702,17 @@ vDHAP_M=Vtp_Mchl * Mchl_DHAP/(Mchl_DHAP + KmDHAP_M * ( 1 + Mchl_PGA/KmPGA_M) * (
 
 vtATP=5*(Mchl_ATP-MC_ATP*2);
 
-global vleakage;
-global vleakage2;
+
 vleak_B=Pco2_B*(Bchl_CO2-BSC_CO2);%0.5376*10*(Bchl_CO2-BSC_CO2);%Vleak*(Bchl_CO2-BSC_CO2);%  Bchl_CO2 -> BSC_CO2
 
 vleak=Pco2*(BSC_CO2-MC_CO2);%Vleak*(BSC_CO2-MC_CO2);%BSC_CO2->MC_CO2
 vleakage=vleak;
 vleakage2=vleak_B;
+
+
 % Photorespiration  
-Vm_PR1=Vm_6*Vm_PR1_ratio*TempCorr_Vm_OC;%%%WY202010  
-global vpr1;
+% Vm_PR1=Vm_6*Vm_PR1_ratio*TempCorr_Vm_OC;%%%WY202010  
+
 vpr1=Vm_PR1*Bchl_RuBP*Bchl_O2/((Bchl_O2+KmO2_PR1*(1+Bchl_CO2/KmCO2_PR1))*(Bchl_RuBP+KmRuBP_PR1*(1+Bchl_PGA/KiPGA_PR1+Bchl_FBP/KiFBP_PR1+Bchl_SBP/KiSBP_PR1+Bchl_Pi/KiPi_PR1+Bchl_NADPH/KiNADPH_PR1)));
 vpr2=Vm_PR2*Bchl_PGCA/(Bchl_PGCA+KmPGCA_PR2*(1+Bchl_GCA/KiGCA_PR2)*(1+Bchl_Pi/KiPI_PR2));
 vpr3=Vm_PR3*Bper_GCA/(Bper_GCA+KmGCA_PR3);
@@ -802,7 +765,7 @@ KmPyr_PCK4=0.33;KmGlu_PCK4=5;KmAla_PCK4=6.67;KmOxog_PCK4=0.15; Ke_PCK4=1;
 KmPyr_PCK5=0.33;KmGlu_PCK5=5;KmAla_PCK5=6.67;KmOxog_PCK5=0.15; Ke_PCK5=1;
 %1.1.1.82B  PCK6
 KmNADPH_PCK6 =0.05;  KmOAA_PCK6 =0.056;  KmNADP_PCK6 =0.045;  Kmmal_PCK6 =32.0;  Ke_PCK6 =4450.0; % No unit
-global Ratio;
+
 Vm_PCK1=1.5/20*Ratio;
 Vm_PCK2=1.5/20*Ratio;
 Vm_PCK4=1.5/20*Ratio;
@@ -819,7 +782,7 @@ vPCK6=Vm_PCK6*(Bchl_OAA*Bchl_NADPH-Bchl_NADP*Bchl_malate/Ke_PCK6)/( KmOAA_PCK6* 
 %Transport for PCK
 %%%%%%%%%%%%%
 %Tasp
-global vAsp;
+
 vAsp=0.664/20*(MC_Asp-BSC_Asp);
 %TAla
 vAla=0.8715/20*(BSC_Ala-MC_Ala);
@@ -853,13 +816,10 @@ vPYR_Bm=1*(Bmito_PYR-BSC_pyruvate);
 vMAL_Bm=1*(BSC_malate-Bmito_MAL);
 
 %%%%%O2 diffusion%%%%
-global vtO2;
-global vtO2_B;
-global vtO2_M;
 
 vtO2=0.122633*(BSC_O2-MC_O2);
 vtO2_B=Pco2_B*(Bchl_O2-BSC_O2);
-vtO2_M=Pco2_B*(Mchl_O2-MC_O2);
+vtO2_M=Pco2*(Mchl_O2-MC_O2);
 Bchl_Asp=BSC_Asp;
 Bchl_Ala=BSC_Ala;
 Mchl_Asp=MC_Asp;
@@ -870,7 +830,7 @@ vAlaB=10*(BSC_Ala-Bchl_Ala);
 vAspM=10*(MC_Asp-Mchl_Asp);
 vAlaM=10*(MC_Ala-Mchl_Ala);
 
-global pathway_option;
+
 if pathway_option==0
     vPCK1=0;
     vPCK2=0;
@@ -979,7 +939,7 @@ if Para_mata==0 % C4 collatz 1992
     %VmaxC4=45;%umol m-2 s-1 maximum rubisco capacity
     VmaxiC4=VmaxC4*2^((LeafTemperature-25)/10)/((1+exp(0.3*(13-LeafTemperature)))*(1+exp(0.3*(LeafTemperature-36))));
     Ji=0.05*Convert * Radiation_PAR;%alpha*ar*f*Qp;
-    Jc=Ci*10^-6*Pressure*kiC4*10^6/Pressure;%pi*(kp-L/pi)/P;
+    Jc=Ci*kiC4;%pi*(kp-L/pi)/P;
     Je=VmaxiC4;
     %Ax=[Ji Jc Je];
     M=(Je+Ji-sqrt((Je+Ji)^2-4*ThetaC4*Je*Ji))/(2*ThetaC4);
@@ -1037,11 +997,11 @@ end
 
 %if gs response time is not O
 if GsResponse==1
-    if kdcon==1
+    if setting.kdcon==1
       kd_Gs= 1/(kd/60);
       ki_Gs= 1/(ki/60);
     end
-    if kdcon==0
+    if setting.kdcon==0
       kd_Gs= 1/((kd+ainter*I)/60);
       ki_Gs= 1/(ki/60);
     end
@@ -1091,7 +1051,7 @@ Abs=0.85;
 EnergyBalanceResidual = Radiation_PAR*Abs + Radiation_NIR+Radiation_LW -Emission -SensibleHeat -LatentHeat - LeafEnergyFluxMe;
 
 
-global reaction_flux;
+
 Reaction_v=zeros(9,1);
 Reaction_v(1)=NetAssimilation;
 Reaction_v(2)=vCO2b;
@@ -1102,17 +1062,15 @@ Reaction_v(6)=EnergyBalanceResidual;
 Reaction_v(7)=vCO2total;
 Reaction_v(8)=vH2Ototal;
 Reaction_v(9)=vgs;
-reaction_flux=Reaction_v;
 
+
+global OLD_TIME;
+global TIME_N;
+global Gs_VEL;
 
 if (TIME_N ==0)
     TIME_N = 1;
 end
-
-% % %if (t > OLD_TIME)
-% %     TIME_N = TIME_N + 1;
-% %     OLD_TIME = t;%Gs_VEL(TIME_N-2,1) ;
-% % %end
 
 
 if (t > OLD_TIME)
@@ -1134,7 +1092,8 @@ Gs_VEL(TIME_N,12) =Gs;
 Gs_VEL(TIME_N,13) =Cb;
 Gs_VEL(TIME_N,14) =Ci;
 Gs_VEL(TIME_N,15) =Gbw;
-global enzyme_flux;
+
+
 Enz_v=zeros(102,1);   
 Enz_v(1)=v1;
 Enz_v(2)=v2;
@@ -1238,7 +1197,7 @@ Enz_v(99)=vAspM;
 Enz_v(100)=vAlaM;
 Enz_v(101)=vEA_PPDKRP_I;
 Enz_v(102)=vEA_PPDKRP_A;
-enzyme_flux=Enz_v;
+% enzyme_flux=Enz_v;
 
 EnzAct_v=zeros(11,1);
 EnzAct_v(1)=vATPsynthase_Act_Mchl;
@@ -1259,6 +1218,11 @@ LMEnz_v(10:111,1)=Enz_v;
 LMEnz_v(112:123,1)=EnzAct_v;
 
 
+global TIME_M;
+global OLD_TIME_M;
+global Meta_VEL;
+
+
 if (TIME_M ==0)
     TIME_M = 1;
 end
@@ -1277,25 +1241,6 @@ Meta_VEL(TIME_M,7) =v5;
 Meta_VEL(TIME_M,8) =v6;
 Meta_VEL(TIME_M,9) =vpr1;
 
-
-global TIME_K;
-global OLD_TIME_K;
-global MY_VEL;
-
-if (TIME_K ==0)
-    TIME_K = 1;
-end
-
-if (t > OLD_TIME_K)
-    TIME_K = TIME_K + 1;
-    OLD_TIME_K = t;
-end
-MY_VEL(TIME_K,1) = t;
-MY_VEL(TIME_K,2) = vinf;
-MY_VEL(TIME_K,3) =v1;
-MY_VEL(TIME_K,4) =v2;
-MY_VEL(TIME_M,5) =v3;
-%% to be continued
 end
 
 

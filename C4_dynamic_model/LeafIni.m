@@ -1,8 +1,9 @@
-function con = LeafIni(BallBerryInterceptC4)
-global WeatherTemperature;
-global WeatherRH;
-global Air_CO2;
+function con = LeafIni(envFactor)
+WeatherTemperature=envFactor.WeatherTemperature;
+WeatherRH=envFactor.WeatherRH;
+Air_CO2=envFactor.Ca_t;
 % global BallBerryInterceptC4;
+BallBerryInterceptC4=0.0576;
 Tleaf=WeatherTemperature;%energy balance 
 H2Oou=0;
 CO2in=0;
