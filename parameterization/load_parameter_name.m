@@ -318,8 +318,10 @@ km{56,1}='KmPGA_M'; km{56,2}='KmGAP_M[56]'; km{56,3}='KmDHAP_M[56]';
 km{57,1}='Ki[57]'; km{57,2}='Kd[57]';
 
 %%
+
+[~,KVlen]=load_initial_solution();
 final_km=[""];
-global KVlen
+% global KVlen
 for i=1:size(km,1)
     temp=km(i,1:KVlen(i));
     temp{1}=strcat(reactions{i}," ",temp{1});
