@@ -1,11 +1,11 @@
 function [common_acc,uniq_acc22,acc_plot22,uniq_acc23,acc_plot23]=load_common_accessions22_23()
 %% ACI and AQ curves from 2022
-acc_info=readtable("../data/curves/2022_maize_reference.csv",'VariableNamingRule','preserve');
+acc_info=readtable("data/curves/2022_maize_reference.csv",'VariableNamingRule','preserve');
 acc=string(acc_info{:,"Accession"});
 uniq_acc=unique(acc);
 
-ACI22=readtable("../data/curves/2022_ACi_rawData_maize.csv",'VariableNamingRule','preserve');
-AQ22=readtable("../data/curves/2022_AQcurves_maize.csv",'VariableNamingRule','preserve');
+ACI22=readtable("data/curves/2022_ACi_rawData_maize.csv",'VariableNamingRule','preserve');
+AQ22=readtable("data/curves/2022_AQcurves_maize.csv",'VariableNamingRule','preserve');
 AQ22=AQ22(AQ22{:,"Flag_removal"}~="x",:); % should be removed 
 
 % check for which accessions we have plots
@@ -32,12 +32,12 @@ acc_plot22=check_ACI(sum(check_ACI,2)~=0 & sum(check_AQ,2)~=0,:);
 
 
 %% ACI and AQ curves from 2023
-acc_info=readtable("../data/curves/2023_maize_reference.csv",'VariableNamingRule','preserve');
+acc_info=readtable("data/curves/2023_maize_reference.csv",'VariableNamingRule','preserve');
 acc=string(acc_info{:,"Accession"});
 uniq_acc=unique(acc);
 
-ACI23=readtable("../data/curves/2023_ACi_rawData_maize.csv",'VariableNamingRule','preserve');
-AQ23=readtable("../data/curves/2023_AQcurves&lightSaturatedGasExchange_maize.csv",'VariableNamingRule','preserve');
+ACI23=readtable("data/curves/2023_ACi_rawData_maize.csv",'VariableNamingRule','preserve');
+AQ23=readtable("data/curves/2023_AQcurves&lightSaturatedGasExchange_maize.csv",'VariableNamingRule','preserve');
 
 % check for which accessions we have plots
 check_ACI=zeros(length(uniq_acc),2);

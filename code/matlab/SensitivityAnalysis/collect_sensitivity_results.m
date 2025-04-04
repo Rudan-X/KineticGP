@@ -33,6 +33,5 @@ for acci=1:68
     end
 end
 
-
 data=array2table(parameters,"VariableNames",param_name',"RowNames",final_acc);
 writetable(data,strcat(userpath,"/results/sensitivity_results/fitted_parameters.csv"),"WriteVariableNames",true,"WriteRowNames",true)
