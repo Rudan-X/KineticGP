@@ -17,17 +17,17 @@ It allows the identification of  key kinetic parameters identified via sensitivi
 
 
 ## Sensitivity analysis of kinetic parameters
-To estimate kinetic parameters of top control coefficient for each genotype, run the code [optim_MCMC_sampling.m](https://github.com/Rudan-X/KineticGP/blob/master/code/matlab/parameterization/optim_MCMC_sampling.m) 
 
-To perform parallel estimation of all genotypes on linux HPC, submit batch [matlab_sensitivity.job](https://github.com/Rudan-X/KineticGP/blob/master/code/bash/matlab_parameterization.job) to Slurm 
+To perform parallel sensitivity analysis of all genotypes and all kinetic parameters on linux HPC, submit batch [matlab_sensitivity.job](https://github.com/Rudan-X/KineticGP/blob/master/code/bash/matlab_sensitivity.job) to Slurm 
 
 
 ## Estimation of kinetic parameters
-Please run the code KineticGP\code\matlab\parameterization\parallel_parameterization.m or submit KineticGP\code\bash\matlab_parameterization.job on linux HPC
+To estimate kinetic parameters of top control coefficient for each genotype, run the code [optim_MCMC_sampling.m](https://github.com/Rudan-X/KineticGP/blob/master/code/matlab/parameterization/optim_MCMC_sampling.m) 
+To perform parallel estimation of all genotypes on linux HPC, submit batch [matlab_parameterization.job](https://github.com/Rudan-X/KineticGP/blob/master/code/bash/matlab_sensitivity.job) to Slurm 
 
 
 ## Genomic Prediction of kinetic parameters and photosynthetic rate
-Please run the codes in KineticGP\code\R\GenomicPrediction 
+All codes to perform genomic prediction and heritability calculation are found in KineticGP\code\R\GenomicPrediction 
 
 
 ## Reproduce the results presented in the paper
