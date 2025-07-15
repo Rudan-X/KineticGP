@@ -1,5 +1,7 @@
 library("readxl")
-setwd("C:/Users/Rudan/Documents/MATLAB_Drive/KineticGP/")
+library(dplyr)
+path <- "C:/Users/Rudan/Documents/GitHub/KineticGP/"
+setwd(path)
 
 temperature<-read.csv("data/field_data/temp_maize.csv")
 
@@ -13,6 +15,20 @@ colnames(maxtemp)[3]<-"maxTemperature"
 
 temperature<-merge(mintemp[,-2],maxtemp[,-2],by="Date")
 temperature$meanTemperature<-rowMeans(temperature[,2:3])
+
+
+temperature$Date <- as.Date(temperature$Date)
+
+
+get_avg_temp <- function(harvest_date) {
+  temperature %>%
+    filter(Date >= (harvest_date - 7) & Date <= harvest_date) %>%
+    summarise(avg_temp = mean(meanTemperature, na.rm = TRUE)) %>%
+    pull(avg_temp)
+}
+
+
+
 
 AQcurve2<-read.csv("data/processed_data/Testing_AQcurves_years22&23_plot.csv")
 AQcurve2$Plot<-sub("_.*", "", AQcurve2$Plot_rep)
@@ -35,7 +51,14 @@ for (y in 1:3){
   # harv_dates$`Sampling date`<-gsub("/","-",harv_dates$`Sampling date`)
   colnames(harv_dates)<-c("Plot","Date")
   
+  harv_dates$Date <- as.Date(harv_dates$Date)
   df<-merge(harv_dates,temperature,by="Date")
+  
+  df_week <- harv_dates %>%
+    rowwise() %>%
+    mutate(weekly_mean = get_avg_temp(Date)) %>%
+    ungroup()
+  
   
   if (years[y]==2021){
     AQcurve<-AQcurve1
@@ -47,14 +70,23 @@ for (y in 1:3){
   temp<-temp[order(temp$Accession),]
   colnames(temp)[colnames(temp)=="A_sat"]<-"PAR_1800"
   
+  
+  temp.w<-merge(df_week,AQcurve[AQcurve$Year==years[y],],by="Plot")
+  temp.w<-temp.w[order(temp.w$Accession),]
+  colnames(temp.w)[colnames(temp.w)=="A_sat"]<-"PAR_1800"
+  
+  
   temp_ave<-aggregate(temp, by=list(temp$Accession), "mean")
   colnames(temp_ave)[1]="Accession"
   
-  temp_ave<-temp_ave[,c(1,4,5,6,7,9)]
+  temp_ave.w<-aggregate(temp.w, by=list(temp.w$Accession), "mean")
+  colnames(temp_ave.w)[1]="Accession"
   
-  if (years[y]==2021){
-    colnames(temp_ave)[ncol(temp_ave)]<-"PAR_1800"
-  }
+  
+  temp_ave<-temp_ave[,c(1,4,5,6,7,9)]
+  temp_ave.w<-temp_ave.w[,c(1,4,5,7)]
+
+  
   # temp_ave<-aggregate(temp, by=list(temp$Plot,temp$Accession), "mean")
   # colnames(temp_ave)[2]="Accession"
   # temp_ave<-aggregate(temp_ave, by=list(temp_ave$Accession), "mean")
@@ -63,9 +95,15 @@ for (y in 1:3){
   if (y==1){
     Asat_field<-temp
     Asat_field_ave<-temp_ave
+    
+    Asat_field.w<-temp.w
+    Asat_field_ave.w<-temp_ave.w
   }else{
     Asat_field<-rbind(Asat_field,temp[,1:8])
     Asat_field_ave<-rbind(Asat_field_ave,temp_ave)
+    
+    Asat_field.w<-rbind(Asat_field.w,temp.w[,1:6])
+    Asat_field_ave.w<-rbind(Asat_field_ave.w,temp_ave.w)
   }
 }
 
@@ -73,6 +111,10 @@ for (y in 1:3){
 
 write.csv(Asat_field,file="data/processed_data/Testing_Asat3years_fieldcond_plot.csv",row.names = F)
 write.csv(Asat_field_ave,file="data/processed_data/Testing_Asat3years_fieldcond_accession.csv",row.names = F)
+
+
+write.csv(Asat_field.w,file="data/processed_data/Testing_Asat3years_weeklyTEMP_plot.csv",row.names = F)
+write.csv(Asat_field_ave.w,file="data/processed_data/Testing_Asat3years_weeklyTEMP_accession.csv",row.names = F)
 
 
 ############# ACI 21 ######################

@@ -11,8 +11,8 @@ addpath(genpath(strcat(userpath,'KineticGP/data')))
 
 cd(strcat(userpath,'KineticGP/'))
 delete(gcp('nocreate'))
-top_x=[20,30,40];
-parpool(3);
-parfor x=1:3
-    optim_MCMC_sampling(argind,top_x(x))
+
+parpool(4);
+parfor x=1:4
+    optim_MCMC_sampling(argind,x)
 end

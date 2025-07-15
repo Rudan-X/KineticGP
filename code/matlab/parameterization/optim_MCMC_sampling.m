@@ -1,4 +1,4 @@
-function optim_MCMC_sampling(arg_ind,topX)
+function optim_MCMC_sampling(arg_ind,t)
 % INPUTS:
 %    arg_ind:    index of accession to be optimized
 %
@@ -7,7 +7,8 @@ function optim_MCMC_sampling(arg_ind,topX)
 %    Intermediate solutions saved in saving_path
 
 KE_type='equilibrator';
-
+top_x=[10,20,30,40];
+topX=top_x(t);
 %% Load all accessions
 data=load("data/processed_data/final_acc22_23.mat");
 final_acc=data.final_acc;
@@ -19,10 +20,11 @@ accession=final_acc(arg_ind);
 
 % Seed random number generator
 % rng(0);
-
 %% Load parameters to be optimied
 
-optim_ind=sort(optimized_var_ind(topX));
+optim_ind=optimized_var_ind(topX);
+
+
 
 %% Generation of the structs and options for PESTO
 % The structs and the PestoOptions object, which are necessary for the 
@@ -57,7 +59,6 @@ optionsPesto.localOptimizerOptions.Hessian='off';
 
 objectiveFunction = @(x)optim_obj_MCMC(x,accession,KE_type,optim_ind);
 optionsPesto.obj_type  = 'negative log-posterior'; % if minimization is
-
 
 
 %% Parameter Sampling

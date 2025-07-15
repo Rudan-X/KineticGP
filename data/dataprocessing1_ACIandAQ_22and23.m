@@ -1,20 +1,15 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% PART1: Store 68 training accessions with both ACI and AQ curves from 2022 and 2023
 clear
-if exist('/work/xu2/KineticGP/', 'dir')
-    folderdir='/work/xu2/KineticGP/';
-else
-    folderdir='C:/Users/Rudan/Documents/MATLAB_Drive/KineticGP/';
-end
-% 
-addpath(strcat(folderdir,'C4_dynamic_model/'))
-addpath(strcat(folderdir,'parameterization/'))
-addpath(strcat(folderdir,'data/'))
+userpath='C:/Users/Rudan/Documents/GitHub/';
+addpath(genpath(strcat(userpath,'KineticGP/code')))
+addpath(genpath(strcat(userpath,'KineticGP/data')))
+cd(strcat(userpath,'KineticGP/'))
 
 %%
 [final_acc,~,~,~,~]=load_common_accessions22_23();
 save('../data/processed_data/final_acc22_23.mat','final_acc')
-writetable(array2table(final_acc,"VariableNames","Accession"),strcat("../data/processed_data/Training68genotypes.csv"),'WriteVariableNames',true,'WriteRowNames',false);
+writetable(array2table(final_acc,"VariableNames","Accession"),strcat("data/processed_data/Training68genotypes.csv"),'WriteVariableNames',true,'WriteRowNames',false);
 
 param_name=load_parameter_name();
 param11=["Ki57","Kd57","MRd","BBslope","BBintercept","tao_ActRubisco","Vm2","Vm6"];
@@ -24,9 +19,9 @@ vmaxind=find(contains(param_name,'Vm1'),1):find(contains(param_name,'Vm35_Hep'))
 init_sol=load_initial_solution();
 
 
-writetable(array2table([init_sol(ind11);init_sol(ind11(7:8))],"VariableNames","Initial_value"),strcat("../data/processed_data/parameters11Wang.csv"),'WriteVariableNames',true,'WriteRowNames',false);
+writetable(array2table([init_sol(ind11);init_sol(ind11(7:8))],"VariableNames","Initial_value"),strcat("data/processed_data/parameters11Wang.csv"),'WriteVariableNames',true,'WriteRowNames',false);
 
-writetable(array2table([init_sol;init_sol(vmaxind)],"VariableNames","Initial_value"),strcat("../data/processed_data/parametersWang.csv"),'WriteVariableNames',true,'WriteRowNames',false);
+writetable(array2table([init_sol;init_sol(vmaxind)],"VariableNames","Initial_value"),strcat("data/processed_data/parametersWang.csv"),'WriteVariableNames',true,'WriteRowNames',false);
 
 %%
 na=length(final_acc);
@@ -132,10 +127,10 @@ years=[2022*ones(length(plots22),1);2023*ones(length(plots23),1)];
 
 sim_var=["Year";"Accession";"Plot_rep";strcat("PAR_",string([1800,1100,500,300,150,50]))'];
 
-writetable(array2table([years,accs,plotrep,measA_all],"VariableNames",sim_var),"../data/processed_data/Training_AQcurves_years22&23_plot.csv",'WriteVariableNames',true,'WriteRowNames',true);
+writetable(array2table([years,accs,plotrep,measA_all],"VariableNames",sim_var),"data/processed_data/Training_AQcurves_years22&23_plot.csv",'WriteVariableNames',true,'WriteRowNames',true);
 
 %%
-save("../data/processed_data/measured_curves22_23.mat",'ACa22','GsCa22','AQ22','ACa23','GsCa23','AQ23');
+save("data/processed_data/measured_curves22_23.mat",'ACa22','GsCa22','AQ22','ACa23','GsCa23','AQ23');
 
 
 measA_all=[AQ22.meas';AQ23.meas'];
@@ -144,4 +139,17 @@ years=[2022*ones(length(final_acc),1);2023*ones(length(final_acc),1)];
 
 sim_var=["Year";"Accession";strcat("PAR_",string([1800,1100,500,300,150,50]))'];
 
-writetable(array2table([years,accs,measA_all],"VariableNames",sim_var),"../data/processed_data/Training_AQcurves_years22&23_accession.csv",'WriteVariableNames',true,'WriteRowNames',true);
+writetable(array2table([years,accs,measA_all],"VariableNames",sim_var),"data/processed_data/Training_AQcurves_years22&23_accession.csv",'WriteVariableNames',true,'WriteRowNames',true);
+
+%%
+mat=[ ACa22.meas',AQ22.meas',ACa23.meas',AQ23.meas'];
+
+
+sim_var=["Accession"; strcat("2022_CO2_",string([400, 600, 800, 1000, 1250,300,250,200, 100,75, 25]))';
+    strcat("2022_PAR_",string([1800,1100,500,300,150,50]))';
+    strcat("2023_CO2_",string([400, 600, 800, 1000, 1250,300,250,200, 100,75, 25]))';
+    strcat("2023_PAR_",string([1800,1100,500,300,150,50]))'];
+
+T = array2table([final_acc,mat],"VariableNames",sim_var);
+
+writetable(T,"data/processed_data/Training_ACIAQ_years22&23_accession.csv",'WriteVariableNames',true,'WriteRowNames',true);

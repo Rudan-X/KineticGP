@@ -1,4 +1,4 @@
-function parallel_analysis1(varind)
+function parallel_analysis(varind)
 
 delete(gcp('nocreate'))
 

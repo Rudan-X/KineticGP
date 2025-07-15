@@ -27,6 +27,7 @@ np=length(param_name);
 
 Ci_deri=NaN(68,np);
 Ci_log=NaN(68,np);
+final_y=NaN(68,np);
 dlny=NaN(68,np);
 for acci=1:68
     for v=1:length(param_name)
@@ -40,6 +41,7 @@ for acci=1:68
         x0=init_sol(v);
 
         yf=min(MCMCres.parameters.S.logPost);
+        final_y(acci,v)=yf;
         dlny(acci,v)=log(yf/y0(acci));
 
         dlnx=log(xf/x0);
@@ -68,14 +70,30 @@ data=array2table(Ci_log,"VariableNames",param_name',"RowNames",final_acc);
 writetable(data,"results/sensitivity_results/control_coefficient_log.csv","WriteVariableNames",true,"WriteRowNames",true)
 
 
-maxn=30;
-param_sum=nansum(Ci_deri,1);
-[sorted,ind] = sort(param_sum,'descend');
-topX2=[param_name(ind(1:maxn)),sorted(1:maxn)',init_sol(ind(1:maxn))];
+data=array2table(final_y,"VariableNames",param_name',"RowNames",final_acc);
+writetable(data,"results/sensitivity_results/optimized_chi2.csv","WriteVariableNames",true,"WriteRowNames",true)
 
-param_sum=nansum(Ci_log,1);
-[sorted,ind] = sort(param_sum,'descend');
-topX=[param_name(ind(1:maxn)),sorted(1:maxn)',init_sol(ind(1:maxn))];
+deg=56-1;
+data=array2table(final_y./deg,"VariableNames",param_name',"RowNames",final_acc);
+writetable(data,"results/sensitivity_results/optimized_reduced_chi2.csv","WriteVariableNames",true,"WriteRowNames",true)
+% maxn=30;
+% param_sum=nansum(Ci_deri,1);
+% [sorted,ind] = sort(param_sum,'descend');
+% topX2=[param_name(ind(1:maxn)),sorted(1:maxn)',init_sol(ind(1:maxn))];
+
+% param_sum=nansum(Ci_log,1);
+% [sorted,ind] = sort(param_sum,'descend');
+% topX=[param_name(ind(1:maxn)),sorted(1:maxn)',init_sol(ind(1:maxn))];
+
+param_mean=nanmean(Ci_log,1);
+[sorted,ind] = sort(param_mean,'descend');
 
 params=array2table([param_name(ind),sorted'],"VariableNames",["Ranked_parameters","Averaged_coefficient"]);
 writetable(params,"results/sensitivity_results/ranked_parameters.csv","WriteVariableNames",true,"WriteRowNames",false)
+
+
+param_median=nanmedian(Ci_log,1);
+[sorted,ind] = sort(param_median,'descend');
+
+params=array2table([param_name(ind),sorted'],"VariableNames",["Ranked_parameters","Median_coefficient"]);
+writetable(params,"results/sensitivity_results/ranked_parameters_median.csv","WriteVariableNames",true,"WriteRowNames",false)

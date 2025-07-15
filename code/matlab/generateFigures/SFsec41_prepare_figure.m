@@ -1,0 +1,36 @@
+userpath='C:/Users/Rudan/Documents/GitHub/';
+addpath(genpath(strcat(userpath,'PESTO-master/')))
+
+addpath(genpath(strcat(userpath,'KineticGP/code')))
+addpath(genpath(strcat(userpath,'KineticGP/data')))
+
+%%
+SFsec41_calculate_CIs()
+%%
+
+data=load("data/processed_data/final_acc22_23.mat");
+final_acc=data.final_acc;
+
+%%
+
+top_x=[10,20,30,40];
+for t=1:4
+    topX=top_x(t);
+    conflevel=1; % 80%CI
+    optim_ind=optimized_var_ind(topX);
+    ratio=zeros(68,length(optim_ind));
+
+    for arg_ind=1:68
+        acc=final_acc(arg_ind);
+        filen=strcat('results/confidence_interval/param_top',char(string(topX)),'_CI300_',char(acc),'.mat');
+        parameters=load(filen);
+        ratio(arg_ind,:)=parameters.CI.S(:,2,conflevel)./parameters.CI.S(:,1,conflevel);
+    end
+
+    estimated=readtable(strcat("results/parameterization/param_top",string(topX),"/optimized_parameters.csv"));
+    estimated(:,1)=[];
+    params=estimated.Properties.VariableNames;
+    data=array2table(ratio,"VariableNames",params);
+    writetable(data,strcat("results/confidence_interval/CIsummary_top",string(topX),".csv"),"WriteVariableNames",true)
+end
+
